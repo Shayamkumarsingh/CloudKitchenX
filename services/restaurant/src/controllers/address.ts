@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { AuthenticatedRequest } from "../middlewares/isAuth.js";
-import TryCatch from "../middlewares/trycatch.js";
+import TryCatch from "../middlewares/tryCatch.js";
 import Address from "../models/Address.js";
 
 export const addAddress = TryCatch(async (req: AuthenticatedRequest, res) => {

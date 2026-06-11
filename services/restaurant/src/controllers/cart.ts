@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { AuthenticatedRequest } from "../middlewares/isAuth.js";
-import TryCatch from "../middlewares/trycatch.js";
+import TryCatch from "../middlewares/tryCatch.js";
 import Cart from "../models/Cart.js";
 
 export const addToCart = TryCatch(async (req: AuthenticatedRequest, res) => {

@@ -59,19 +59,30 @@ export const isAuth = async (
   }
 };
 
-export const isSeller = async (
+export const isAdmin = async (
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
-): Promise<void> => {
-  const user = req.user;
+) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({
+        message: "Please Login",
+      });
+      return;
+    }
 
-  if (user && user.role !== "seller") {
+    if (req.user.role !== "admin") {
+      res.status(403).json({
+        message: "Access denied",
+      });
+      return;
+    }
+
+    next();
+  } catch (error) {
     res.status(401).json({
-      message: "You are not authorized seller",
+      message: "Please Login",
     });
-    return;
   }
-
-  next();
 };

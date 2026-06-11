@@ -1,6 +1,6 @@
 import axios from "axios";
 import { AuthenticatedRequest } from "../middlewares/isAuth.js";
-import TryCatch from "../middlewares/trycatch.js";
+import TryCatch from "../middlewares/tryCatch.js";
 import Address from "../models/Address.js";
 import Cart from "../models/Cart.js";
 import { IMenuItem } from "../models/MenuItems.js";
@@ -438,7 +438,7 @@ export const getCurrentOrderForRider = TryCatch(async (req, res) => {
     });
   }
 
-  const { riderId } = req.query;
+  const riderId = req.query.riderId as string;
 
   if (!riderId) {
     return res.status(400).json({

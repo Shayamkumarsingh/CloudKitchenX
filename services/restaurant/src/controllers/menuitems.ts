@@ -1,7 +1,7 @@
 import axios from "axios";
 import getBuffer from "../config/datauri.js";
 import { AuthenticatedRequest } from "../middlewares/isAuth.js";
-import TryCatch from "../middlewares/trycatch.js";
+import TryCatch from "../middlewares/tryCatch.js";
 import Restaurant from "../models/Restaurant.js";
 import MenuItems from "../models/MenuItems.js";
 

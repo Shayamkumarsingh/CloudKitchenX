@@ -50,15 +50,15 @@ const OrderPage = () => {
     };
   }, [socket]);
 
-  useEffect(() => {
-    if (!socket || !id) return;
+  // useEffect(() => {
+  //   if (!socket || !id) return;
 
-    socket.emit("join", `user:${id}`);
+  //   socket.emit("join", `user:${id}`);
 
-    return () => {
-      socket.emit("leave", `user:${id}`);
-    };
-  }, [socket, id]);
+  //   return () => {
+  //     socket.emit("leave", `user:${id}`);
+  //   };
+  // }, [socket, id]);
 
   const [riderLocation, setRiderLocation] = useState<[number, number] | null>(
     null

@@ -5,8 +5,9 @@ import axios from "axios";
 import { riderService } from "../main";
 import toast from "react-hot-toast";
 import { BiUpload } from "react-icons/bi";
+import { BiPowerOff } from "react-icons/bi";
 import type { IOrder } from "../types";
-import audio from "../assets/faaah.mp3";
+// import audio from "../assets/faaah.mp3";
 import RiderOrderRequest from "../components/RiderOrderRequest";
 import RiderCurrentOrder from "../components/RiderCurrentOrder";
 import RiderOrderMap from "../components/RiderOrderMap";
@@ -21,6 +22,8 @@ interface IRider {
   isAvailble: boolean;
 }
 
+
+
 const RiderDashboard = () => {
   const { user } = useAppData();
   const { socket } = useSocket();
@@ -33,26 +36,34 @@ const RiderDashboard = () => {
   const [incomingOrders, setIncomingOrders] = useState<string[]>([]);
   const [currentOrder, setCurrentOrder] = useState<IOrder | null>(null);
 
-  const [audioUnlocked, setAudioUnlocked] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  useEffect(() => {
-    audioRef.current = new Audio(audio);
-    audioRef.current.preload = "auto";
-  }, []);
-
-  const unlockAudio = async () => {
-    try {
-      if (!audioRef.current) return;
-      await audioRef.current.play();
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      setAudioUnlocked(true);
-      toast.success("Sound Enabled");
-    } catch (error) {
-      toast.error("Tap again to enable sound");
-    }
+  const { setUser, setIsAuth } = useAppData();
+  
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setUser(null);
+    setIsAuth(false);
   };
+
+  // const [audioUnlocked, setAudioUnlocked] = useState(false);
+  // const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // useEffect(() => {
+  //   audioRef.current = new Audio(audio);
+  //   audioRef.current.preload = "auto";
+  // }, []);
+
+  // const unlockAudio = async () => {
+  //   try {
+  //     if (!audioRef.current) return;
+  //     await audioRef.current.play();
+  //     audioRef.current.pause();
+  //     audioRef.current.currentTime = 0;
+  //     setAudioUnlocked(true);
+  //     toast.success("Sound Enabled");
+  //   } catch (error) {
+  //     toast.error("Tap again to enable sound");
+  //   }
+  // };
 
   useEffect(() => {
     if (!socket) return;
@@ -62,10 +73,10 @@ const RiderDashboard = () => {
         prev.includes(orderId) ? prev : [...prev, orderId]
       );
 
-      if (audioUnlocked && audioRef.current) {
-        audioRef.current.currentTime = 0;
-        audioRef.current.play().catch(() => {});
-      }
+      // if (audioUnlocked && audioRef.current) {
+      //   audioRef.current.currentTime = 0;
+      //   audioRef.current.play().catch(() => {});
+      // }
 
       setTimeout(() => {
         setIncomingOrders((prev) => prev.filter((id) => id !== orderId));
@@ -77,7 +88,7 @@ const RiderDashboard = () => {
     return () => {
       socket.off("order:available", onOrderAvailable);
     };
-  }, [socket, audioUnlocked]);
+  }, [socket]);
 
   const fetchProfile = async () => {
     try {
@@ -272,7 +283,24 @@ const RiderDashboard = () => {
       </div>
     );
   return (
+
+
+    
+
     <div className="space-y-4">
+
+
+ <div className="flex justify-end mt-2">
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-1 text-sm text-gray-400 hover:text-red-500 transition"
+          >
+            <BiPowerOff className="h-4 w-4" />
+            Logout
+          </button>
+        </div>
+
+
       <div className="mx-auto max-w-md px-4 py-4">
         <div className="rounded-xl bg-white p-4 shadow space-y-3">
           <img
@@ -324,7 +352,7 @@ const RiderDashboard = () => {
         </div>
       </div>
 
-      {!audioUnlocked && (
+      {/* {!audioUnlocked && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-2xl">🔔</span>
@@ -345,7 +373,7 @@ const RiderDashboard = () => {
             Enable sound
           </button>
         </div>
-      )}
+      )} */}
 
       {profile.isAvailble && incomingOrders.length > 0 && (
         <div className="mx-auto max-w-md px-4 space-y-3">
