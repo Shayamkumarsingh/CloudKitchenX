@@ -1,0 +1,103 @@
+pipeline {
+    agent any
+
+    options {
+        skipDefaultCheckout(true)
+    }
+
+    triggers {
+        githubPush()
+    }
+
+    environment {
+        IMAGE_NAME  = "ghcr.io/${GITHUB_REPO_OWNER}/food_realtime"
+        IMAGE_TAG   = "${GIT_COMMIT}"
+        CR_PAT      = credentials('ghcr-cr-pat')
+        REGISTRY    = "ghcr.io"
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Check changed paths') {
+            steps {
+                script {
+                    def changes = sh(
+                        script: "git diff --name-only HEAD~1 HEAD || true",
+                        returnStdout: true
+                    ).trim()
+
+                    if (!changes.contains("realtime/")) {
+                        echo "No changes under realtime/, skipping pipeline."
+                        currentBuild.result = 'SUCCESS'
+                        error("Skipping - no relevant changes")
+                    }
+                }
+            }
+        }
+
+        stage('Login to GHCR') {
+            steps {
+                sh '''
+                    echo "$CR_PAT" | docker login ghcr.io -u "$GITHUB_REPO_OWNER" --password-stdin
+                '''
+            }
+        }
+
+        stage('Set up Buildx') {
+            steps {
+                sh '''
+                    docker buildx create --use --name realtime-builder || docker buildx use realtime-builder
+                '''
+            }
+        }
+
+        stage('Build and Push Realtime Image') {
+            steps {
+                sh '''
+                    docker buildx build \
+                        --push \
+                        --tag ${IMAGE_NAME}:${IMAGE_TAG} \
+                        -f realtime/Dockerfile \
+                        realtime
+                '''
+            }
+        }
+
+        stage('Update image tag in food_infra') {
+            steps {
+                sh '''
+                    set -e
+                    git config --global user.name "jenkins-ci"
+                    git config --global user.email "jenkins@ci.local"
+
+                    git clone https://${CR_PAT}@github.com/beltawn3507/food_infra.git
+                    cd food_infra/realtime
+
+                    sed -i "s|newTag: .*|newTag: ${IMAGE_TAG}|" kustomization.yaml
+
+                    if git diff --quiet; then
+                        echo "No image tag change detected. Skipping commit."
+                        exit 0
+                    fi
+
+                    git add kustomization.yaml
+                    git commit -m "realtime service: update image tag to ${IMAGE_TAG}"
+                    git pull --rebase origin main
+                    git push origin main
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            sh 'docker logout ghcr.io || true'
+        }
+    }
+}
