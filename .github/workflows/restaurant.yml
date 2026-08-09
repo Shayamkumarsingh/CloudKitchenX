@@ -1,0 +1,73 @@
+name: rest-ci
+run-name: rest-ci workflow in github actions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "restaurant/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "restaurant/**"
+
+jobs:
+  build-and-push-rest:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR 
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{github.repository_owner}}
+          password: ${{secrets.CR_PAT}}
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build and push rest image
+        uses: docker/build-push-action@v5
+        with:
+          context: restaurant
+          file: restaurant/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{github.repository_owner}}/food_rest:${{github.sha}}
+
+      - name: Update rest image tag in food_infra
+        env:
+          CR_PAT: ${{ secrets.CR_PAT }}
+          IMAGE_TAG: ${{ github.sha }}
+          IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/food_rest
+        run: |
+          set -e
+
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+
+          git clone https://${CR_PAT}@github.com/beltawn3507/food_infra.git
+          cd food_infra/rest
+
+          # Update only the image tag (Kustomize-safe)
+          # sed -i "s|\(name: ${IMAGE_NAME}\n\s*newTag:\).*|\1 ${IMAGE_TAG}|" kustomization.yaml
+          sed -i "s|newTag: .*|newTag: ${IMAGE_TAG}|" kustomization.yaml
+
+
+          # Exit if nothing changed
+          if git diff --quiet; then
+            echo "No image tag change detected. Skipping commit."
+            exit 0
+          fi
+
+          git add kustomization.yaml
+          git commit -m "rest: update image tag to ${IMAGE_TAG}"
+          git pull --rebase origin main
+          git push origin main
