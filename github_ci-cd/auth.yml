@@ -1,0 +1,73 @@
+name: auth-ci
+run-name: auth-ci workflow in github actions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "auth/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "auth/**"
+
+jobs:
+  build-and-push-auth:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Login to GHCR 
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{github.repository_owner}}
+          password: ${{secrets.CR_PAT}}
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build and push auth image
+        uses: docker/build-push-action@v5
+        with:
+          context: auth
+          file: auth/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{github.repository_owner}}/food_auth:${{github.sha}}
+
+      - name: Update auth image tag in food_infra
+        env:
+          CR_PAT: ${{ secrets.CR_PAT }}
+          IMAGE_TAG: ${{ github.sha }}
+          IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/food_auth
+        run: |
+          set -e
+
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+
+          git clone https://${CR_PAT}@github.com/beltawn3507/food_infra.git
+          cd food_infra/auth
+
+         
+          # sed -i "s|\(name: ${IMAGE_NAME}\n\s*newTag:\).*|\1 ${IMAGE_TAG}|" kustomization.yaml
+          sed -i "s|newTag: .*|newTag: ${IMAGE_TAG}|" kustomization.yaml
+
+
+          
+          if git diff --quiet; then
+            echo "No image tag change detected. Skipping commit."
+            exit 0
+          fi
+
+          git add kustomization.yaml
+          git commit -m "auth service: update image tag to ${IMAGE_TAG}"
+          git pull --rebase origin main
+          git push origin main
